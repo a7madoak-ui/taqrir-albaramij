@@ -638,7 +638,7 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 
 /* ═════════ مفاتيح التخزين ═════════ */
 const K_SET='rep2_settings', K_DRAFT='rep2_draft', K_ARCH='rep2_archive';
-const APP_VERSION='25';
+const APP_VERSION='26';
 
 /* ═════════ القوائم القابلة للإدارة ═════════ */
 const CATS=[
@@ -658,7 +658,7 @@ const FIELDS=[
   {key:'entity',  list:'entities', l:9,   t:24.8, w:27, h:4.0, ph:'الجهة المنفّذة', fs:1.78, align:'center'},
   {key:'targets', list:'targets',  l:9,   t:35.0, w:29, h:4.0, ph:'المستهدفون',    fs:1.78, align:'center'},
   {key:'date',    type:'date',     l:38,  t:39.9, w:24,   h:2.0, ph:'/  /  ١٤٤هـ',   fs:1.95, align:'center'},
-  {key:'week',    type:'week',     l:34,  t:41.9,  w:32,  h:1.5,  ph:'الأسبوع الدراسي', fs:1.6,  align:'center'},
+  {key:'week',    type:'week',     l:34,  t:41.9,  w:32,  h:1.5,  ph:'الأسبوع الدراسي', fs:1.5,  align:'center'},
   {key:'goal0', group:'goals', l:48.6, t:48.47, w:39, h:2.6, ph:'هدف ١', fs:1.85, align:'right'},
   {key:'goal1', group:'goals', l:7.7,  t:48.47, w:39, h:2.6, ph:'هدف ٢', fs:1.85, align:'right'},
   {key:'goal2', group:'goals', l:48.6, t:51.23, w:39, h:2.6, ph:'هدف ٣', fs:1.85, align:'right'},
@@ -1191,16 +1191,17 @@ function openFieldEditor(f){
     <div class="bs-foot"><button class="btn ghost full" id="fe-clr">مسح</button><button class="btn ok full" id="fe-ok">حفظ</button></div>`;
   const inp=$('#fe-in',ov.bs), list=$('#fe-list',ov.bs);
   inp.value=D[f.key]||'';
+  let typed=false;   // لا تُرشَّح القائمة إلا بعد أن يكتب المستخدم
   function build(){
-    const arr=SET.lists[f.list]||[]; const q=clean(inp.value);
-    const fl=q?arr.filter(x=>x.includes(q)):arr;
+    const arr=SET.lists[f.list]||[]; const q=clean(inp.value), cur=clean(D[f.key]);
+    const fl=(typed&&q)?arr.filter(x=>x.includes(q)):arr;
     list.innerHTML='';
     if(!arr.length){ list.innerHTML='<div class="empty-note">لا توجد خيارات بعد.<br>أضِفها من ⚙️ الإعدادات، أو اكتب القيمة بالأعلى.</div>'; return; }
     if(!fl.length){ list.innerHTML='<div class="empty-note">لا مطابقة — استخدم نصّك بالأعلى ثم «حفظ».</div>'; return; }
-    fl.forEach(o=>{ const b=el('button','opt'); b.textContent=o; b.onclick=()=>{ D[f.key]=o; commit(); }; list.appendChild(b); });
+    fl.forEach(o=>{ const b=el('button','opt'+(o===cur?' sel':'')); b.textContent=o; b.onclick=()=>{ D[f.key]=o; commit(); }; list.appendChild(b); });
   }
   function commit(){ saveDraft(); if(f.key==='name') applyLink(D.name); renderFields(); ov.close(); }
-  inp.addEventListener('input',build);
+  inp.addEventListener('input',()=>{ typed=true; build(); });
   $('#fe-ok',ov.bs).onclick=()=>{ D[f.key]=clean(inp.value); commit(); };
   $('#fe-clr',ov.bs).onclick=()=>{ D[f.key]=''; commit(); };
   ov.bs.querySelector('.bs-x').onclick=ov.close;
@@ -1261,9 +1262,11 @@ function openGroupEditor(kind, focusKey){
     grp:'<b>جماعي:</b> اكتب أو الصق كل العبارات معاً في صندوق واحد، عبارة في كل سطر (حتى ٤).'
   };
   const lines=()=>ta.value.split('\n').map(s=>s.trim()).filter(Boolean);
-  function setMode(m){
-    if(m==='grp') ta.value=ins.map(x=>clean(x.value)).filter(Boolean).join('\n');
-    else { const ls=lines().slice(0,4); ins.forEach((x,i)=>x.value=ls[i]||''); }
+  function setMode(m,sync=true){
+    if(sync){
+      if(m==='grp') ta.value=ins.map(x=>clean(x.value)).filter(Boolean).join('\n');
+      else { const ls=lines().slice(0,4); ins.forEach((x,i)=>x.value=ls[i]||''); }
+    }
     mode=m;
     indV.style.display = m==='ind'?'flex':'none';
     grpV.style.display = m==='grp'?'block':'none';
@@ -1297,7 +1300,7 @@ function openGroupEditor(kind, focusKey){
   };
   $('#g-clr',ov.bs).onclick=()=>{ keys.forEach(k=>D[k]=''); D[scaleKey]=scale; saveDraft(); renderFields(); ov.close(); };
   ov.bs.querySelector('.bs-x').onclick=ov.close;
-  setMode('ind');
+  setMode('ind',false);   // عرض الوضع الفردي مع إبقاء القيم الحالية كما هي
   build();
   // ركّز الصندوق المطابق للخانة التي ضُغطت في النموذج
   const fi=keys.indexOf(focusKey);
