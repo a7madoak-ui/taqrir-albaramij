@@ -266,6 +266,7 @@ button{cursor:pointer}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .hintbar{max-width:820px;margin:-12px auto 0;text-align:center;color:var(--mut);font-size:12px;padding:0 16px;line-height:1.7}
+.hintbar .ver{display:block;margin-top:6px;font-weight:800;color:var(--teal-d);font-size:12.5px}
 
 /* ===== تجاوب ===== */
 @media (max-width:520px){
@@ -611,7 +612,7 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 </header>
 
 <main class="stage" aria-label="نموذج تقرير البرامج"><div class="sheet" id="sheet" aria-label="النموذج المعتمد للتعبئة"></div></main>
-<div class="hintbar">اضغط أي خانة لتعبئتها — تظهر خياراتك الجاهزة · اضغط خانة الصورة لالتقاطها أو اختيارها</div>
+<div class="hintbar">اضغط أي خانة لتعبئتها — تظهر خياراتك الجاهزة · اضغط خانة الصورة لالتقاطها أو اختيارها<span class="ver" id="verline"></span></div>
 
 <nav class="bottombar">
   <div class="inner">
@@ -630,7 +631,7 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 
 /* ═════════ مفاتيح التخزين ═════════ */
 const K_SET='rep2_settings', K_DRAFT='rep2_draft', K_ARCH='rep2_archive';
-const APP_VERSION='20';
+const APP_VERSION='21';
 
 /* ═════════ القوائم القابلة للإدارة ═════════ */
 const CATS=[
@@ -1691,6 +1692,7 @@ function init(){
   $('#btn-arch').onclick=openArchive;
   $('#btn-set').onclick=openSettings;
   updateArchBadge();
+  const vl=$('#verline'); if(vl) vl.textContent='الإصدار '+toAr(APP_VERSION);
   window.addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(renderFields,150); });
 }
 window.addEventListener('DOMContentLoaded',init);
