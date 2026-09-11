@@ -95,6 +95,10 @@ button{cursor:pointer}
 .fld.date{font-weight:800;color:#2f3a37;letter-spacing:.3px;background:transparent}
 .fld.date:hover{background:var(--tint-h)}
 .fld.date:not(.empty){background:rgba(255,255,255,.35)}
+.fld.week{font-weight:800;color:var(--ink);background:transparent}
+.fld.week:hover{background:var(--tint-h)}
+.fld.week:not(.empty){background:rgba(255,255,255,.35)}
+.fld.week.wk-hide{display:none}
 .date-mask{position:absolute;left:39%;top:39.7%;width:19.5%;height:2.9%;background:#fff;pointer-events:none;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .dseg{unicode-bidi:isolate}
 .fld.multi{justify-content:center;gap:3.2cqw;flex-wrap:nowrap}
@@ -453,6 +457,7 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 .fld:active{transform:scale(.995)}
 .fld.empty:before{color:rgba(15,78,74,.62);font-weight:800}
 .fld.date{border-color:transparent;background:rgba(255,255,255,.18)}
+.fld.week{border-color:transparent;background:rgba(255,255,255,.18)}
 .fld.date:hover{background:rgba(20,184,166,.13)}
 .pslot{
   border:.2cqw solid rgba(154,107,30,.62);
@@ -633,7 +638,7 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 
 /* ═════════ مفاتيح التخزين ═════════ */
 const K_SET='rep2_settings', K_DRAFT='rep2_draft', K_ARCH='rep2_archive';
-const APP_VERSION='24';
+const APP_VERSION='25';
 
 /* ═════════ القوائم القابلة للإدارة ═════════ */
 const CATS=[
@@ -652,7 +657,8 @@ const FIELDS=[
   {key:'type',    list:'types',    l:62,  t:35.0, w:28, h:4.0, ph:'نوع البرنامج',  fs:1.85, align:'center'},
   {key:'entity',  list:'entities', l:9,   t:24.8, w:27, h:4.0, ph:'الجهة المنفّذة', fs:1.78, align:'center'},
   {key:'targets', list:'targets',  l:9,   t:35.0, w:29, h:4.0, ph:'المستهدفون',    fs:1.78, align:'center'},
-  {key:'date',    type:'date',     l:38,  t:39.9, w:24,   h:2.4, ph:'/  /  ١٤٤هـ',   fs:1.95, align:'center'},
+  {key:'date',    type:'date',     l:38,  t:39.9, w:24,   h:2.0, ph:'/  /  ١٤٤هـ',   fs:1.95, align:'center'},
+  {key:'week',    type:'week',     l:34,  t:41.9,  w:32,  h:1.5,  ph:'الأسبوع الدراسي', fs:1.6,  align:'center'},
   {key:'goal0', group:'goals', l:48.6, t:48.47, w:39, h:2.6, ph:'هدف ١', fs:1.85, align:'right'},
   {key:'goal1', group:'goals', l:7.7,  t:48.47, w:39, h:2.6, ph:'هدف ٢', fs:1.85, align:'right'},
   {key:'goal2', group:'goals', l:48.6, t:51.23, w:39, h:2.6, ph:'هدف ٣', fs:1.85, align:'right'},
@@ -838,6 +844,108 @@ function hijriMonthDays(y,m){
   days.sort((a,b)=>a.hd-b.hd); return days;
 }
 
+/* ═════════ الأسابيع الدراسية (تقويم الوزارة ١٤٤٨/١٤٤٩هـ) ═════════
+   يُحدَّد الأسبوع تلقائيًا من تاريخ التنفيذ. الأسبوع يبدأ الأحد ويمتد حتى السبت.
+   لتحديث السنة القادمة: عدّل جدول WEEKS فقط (بداية كل أسبوع بالميلادي + بدايته ونهايته بالهجري للعرض). */
+const WEEK_NUMBERING='semester';   // 'semester': يبدأ الترقيم من الأول في كل فصل | 'continuous': متسلسل عبر الفصلين
+const WEEK_SHOW_SEMESTER=false;    // true: تُضاف عبارة الفصل بعد رقم الأسبوع
+const WEEKS=[
+  // الفصل الدراسي الأول
+  {sem:1,n:1, g:'2026-08-23',hs:[10,3,1448],he:[14,3,1448]},
+  {sem:1,n:2, g:'2026-08-30',hs:[17,3,1448],he:[21,3,1448]},
+  {sem:1,n:3, g:'2026-09-06',hs:[24,3,1448],he:[28,3,1448]},
+  {sem:1,n:4, g:'2026-09-13',hs:[2,4,1448], he:[6,4,1448]},
+  {sem:1,n:5, g:'2026-09-20',hs:[9,4,1448], he:[13,4,1448]},
+  {sem:1,n:6, g:'2026-09-27',hs:[16,4,1448],he:[20,4,1448]},
+  {sem:1,n:7, g:'2026-10-04',hs:[23,4,1448],he:[27,4,1448]},
+  {sem:1,n:8, g:'2026-10-11',hs:[30,4,1448],he:[4,5,1448]},
+  {sem:1,n:9, g:'2026-10-18',hs:[7,5,1448], he:[11,5,1448]},
+  {sem:1,n:10,g:'2026-10-25',hs:[14,5,1448],he:[18,5,1448]},
+  {sem:1,n:11,g:'2026-11-01',hs:[21,5,1448],he:[25,5,1448]},
+  {sem:1,n:12,g:'2026-11-08',hs:[28,5,1448],he:[2,6,1448]},
+  {sem:1,n:13,g:'2026-11-15',hs:[5,6,1448], he:[9,6,1448]},
+  {sem:1,n:14,g:'2026-11-29',hs:[19,6,1448],he:[23,6,1448]},
+  {sem:1,n:15,g:'2026-12-06',hs:[26,6,1448],he:[1,7,1448]},
+  {sem:1,n:16,g:'2026-12-13',hs:[4,7,1448], he:[8,7,1448]},
+  {sem:1,n:17,g:'2026-12-20',hs:[11,7,1448],he:[15,7,1448]},
+  {sem:1,n:18,g:'2026-12-27',hs:[18,7,1448],he:[22,7,1448]},
+  {sem:1,n:19,g:'2027-01-03',hs:[25,7,1448],he:[29,7,1448]},
+  // الفصل الدراسي الثاني
+  {sem:2,n:1, g:'2027-01-17',hs:[9,8,1448], he:[13,8,1448]},
+  {sem:2,n:2, g:'2027-01-24',hs:[16,8,1448],he:[20,8,1448]},
+  {sem:2,n:3, g:'2027-01-31',hs:[23,8,1448],he:[27,8,1448]},
+  {sem:2,n:4, g:'2027-02-07',hs:[30,8,1448],he:[4,9,1448]},
+  {sem:2,n:5, g:'2027-02-14',hs:[7,9,1448], he:[11,9,1448]},
+  {sem:2,n:6, g:'2027-02-21',hs:[14,9,1448],he:[18,9,1448]},
+  {sem:2,n:7, g:'2027-03-14',hs:[6,10,1448],he:[10,10,1448]},
+  {sem:2,n:8, g:'2027-03-21',hs:[13,10,1448],he:[17,10,1448]},
+  {sem:2,n:9, g:'2027-03-28',hs:[20,10,1448],he:[24,10,1448]},
+  {sem:2,n:10,g:'2027-04-04',hs:[27,10,1448],he:[1,11,1448]},
+  {sem:2,n:11,g:'2027-04-11',hs:[4,11,1448], he:[8,11,1448]},
+  {sem:2,n:12,g:'2027-04-18',hs:[11,11,1448],he:[15,11,1448]},
+  {sem:2,n:13,g:'2027-04-25',hs:[18,11,1448],he:[22,11,1448]},
+  {sem:2,n:14,g:'2027-05-02',hs:[25,11,1448],he:[29,11,1448]},
+  {sem:2,n:15,g:'2027-05-23',hs:[17,12,1448],he:[21,12,1448]},
+  {sem:2,n:16,g:'2027-05-30',hs:[24,12,1448],he:[28,12,1448]},
+  {sem:2,n:17,g:'2027-06-06',hs:[1,1,1449],  he:[5,1,1449]},
+  {sem:2,n:18,g:'2027-06-13',hs:[8,1,1449],  he:[12,1,1449]},
+  {sem:2,n:19,g:'2027-06-20',hs:[15,1,1449], he:[19,1,1449]},
+];
+const ORDINALS=['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر',
+  'الحادي عشر','الثاني عشر','الثالث عشر','الرابع عشر','الخامس عشر','السادس عشر','السابع عشر','الثامن عشر','التاسع عشر','العشرون',
+  'الحادي والعشرون','الثاني والعشرون','الثالث والعشرون','الرابع والعشرون','الخامس والعشرون','السادس والعشرون','السابع والعشرون','الثامن والعشرون','التاسع والعشرون','الثلاثون',
+  'الحادي والثلاثون','الثاني والثلاثون','الثالث والثلاثون','الرابع والثلاثون','الخامس والثلاثون','السادس والثلاثون','السابع والثلاثون','الثامن والثلاثون'];
+const SEM_NAMES={1:'الفصل الدراسي الأول',2:'الفصل الدراسي الثاني'};
+/* هجري (أم القرى) → ميلادي: تقدير ثم مطابقة دقيقة عبر gToH */
+function hToG(y,m,d){
+  y=+fromAr(y); m=+fromAr(m); d=+fromAr(d); if(!y||!m||!d) return null;
+  const guess=ANCHOR+Math.round((y-1446)*354.36707+(m-1)*29.530589+(d-1))*DAY;
+  for(let off=-3;off<=3;off++){ const g=new Date(guess+off*DAY); try{ const h=gToH(g); if(h.y===y&&h.m===m&&h.d===d) return g; }catch(e){} }
+  return null;
+}
+function weekOfHijri(date){
+  if(!date||!date.y||!date.m||!date.d) return null;
+  const g=hToG(date.y,date.m,date.d); if(!g) return null;
+  const t=Date.UTC(g.getUTCFullYear(),g.getUTCMonth(),g.getUTCDate());
+  for(const w of WEEKS){ const s=Date.parse(w.g+'T00:00:00Z'); if(t>=s&&t<s+7*DAY) return w; }
+  return null;
+}
+function weekNumber(w){ return WEEK_NUMBERING==='continuous' ? WEEKS.indexOf(w)+1 : w.n; }
+function weekLabel(w){
+  const n=weekNumber(w); const name=ORDINALS[n-1]||toAr(n);
+  return 'الأسبوع '+name+(WEEK_SHOW_SEMESTER?' - '+SEM_NAMES[w.sem]:'');
+}
+/* نص خانة الأسبوع: الاختيار اليدوي إن وُجد، وإلا الحساب التلقائي من التاريخ */
+function weekLabelOf(rep){
+  if(rep&&clean(rep.week)) return clean(rep.week);
+  const w=weekOfHijri(rep&&rep.date); return w?weekLabel(w):'';
+}
+function weekRangeText(w){ return `${toAr(w.hs[0])}/${toAr(w.hs[1])} – ${toAr(w.he[0])}/${toAr(w.he[1])}/${toAr(w.he[2])}هـ`; }
+function openWeekPicker(){
+  const ov=mkOverlay('week');
+  const auto=weekOfHijri(D.date);
+  ov.bs.innerHTML=`
+    <div class="bs-grip"></div>
+    <div class="bs-head"><span class="bs-title">الأسبوع الدراسي<small>يُحدَّد تلقائيًا من تاريخ التنفيذ، ويمكن اختياره يدويًا</small></span><button class="bs-x">✕</button></div>
+    <div class="bs-body"><div class="opts" id="wk-list"></div></div>
+    <div class="bs-foot"><button class="btn ghost full" id="wk-auto">↺ تلقائي حسب التاريخ</button></div>`;
+  const list=$('#wk-list',ov.bs);
+  const note=el('div','hint'); note.innerHTML=auto?`التلقائي للتاريخ الحالي: <b>${esc(weekLabel(auto))}</b>`:'لا يوجد أسبوع دراسي مطابق للتاريخ الحالي (إجازة أو خارج الفصلين). اختر يدويًا إن لزم.';
+  list.appendChild(note);
+  [1,2].forEach(sem=>{
+    const h=el('div','lab'); h.textContent=SEM_NAMES[sem]; list.appendChild(h);
+    WEEKS.filter(w=>w.sem===sem).forEach(w=>{
+      const b=el('button','opt'); const lbl=weekLabel(w);
+      b.innerHTML=`<span>${esc(lbl)}</span><small style="display:block;font-weight:600;color:var(--mut);margin-top:3px">${weekRangeText(w)}</small>`;
+      if(clean(D.week)===lbl||(!clean(D.week)&&auto===w)) b.classList.add('sel');
+      b.onclick=()=>{ D.week=lbl; saveDraft(); renderFields(); ov.close(); };
+      list.appendChild(b);
+    });
+  });
+  $('#wk-auto',ov.bs).onclick=()=>{ D.week=''; saveDraft(); renderFields(); ov.close(); };
+  ov.bs.querySelector('.bs-x').onclick=ov.close;
+}
+
 /* ═════════ بناء الورقة ═════════ */
 function buildSheet(){
   const sheet=$('#sheet');
@@ -845,10 +953,10 @@ function buildSheet(){
   // قناع أبيض يخفي التاريخ المطبوع القديم على النموذج (يُنشأ مرة واحدة، أسفل حقل التاريخ)
   if(!sheet.querySelector('.date-mask')){ sheet.appendChild(el('div','date-mask')); }
   FIELDS.forEach(f=>{
-    const d=el('div','fld '+(f.align==='right'?'right':'center')+(f.type==='date'?' date':''));
+    const d=el('div','fld '+(f.align==='right'?'right':'center')+(f.type==='date'?' date':'')+(f.type==='week'?' week':''));
     d.style.cssText=`left:${f.l}%;top:${f.t}%;width:${f.w}%;height:${f.h}%`;
     d.dataset.key=f.key; d.dataset.ph=f.ph;
-    d.addEventListener('click',()=> f.type==='date'?openDate():openFieldEditor(f));
+    d.addEventListener('click',()=> f.type==='date'?openDate():f.type==='week'?openWeekPicker():openFieldEditor(f));
     sheet.appendChild(d);
   });
   PHOTOS.forEach((p,i)=>{
@@ -877,6 +985,13 @@ function fldBase(f){
 function renderFields(){
   FIELDS.forEach(f=>{
     const d=$(`.fld[data-key="${f.key}"]`); if(!d) return;
+    if(f.type==='week'){
+      const s=weekLabelOf(D), hasDate=!!(D.date&&D.date.y);
+      d.classList.toggle('wk-hide',!hasDate&&!s);
+      if(s){ d.textContent=s; d.classList.remove('empty'); d.style.fontSize=f.fs+'cqw'; }
+      else { d.textContent=''; d.classList.add('empty'); d.style.fontSize=''; }
+      return;
+    }
     if(f.type==='date'){
       const s=dateStr();
       if(s){ d.innerHTML=s; d.classList.remove('empty'); d.style.fontSize=f.fs+'cqw'; }
@@ -1285,10 +1400,14 @@ function renderReportToSheet(sheet,rep){
   if(_formBgJpeg){ const bg=el('img','sheet-bg'); bg.alt=''; bg.src=_formBgJpeg; sheet.appendChild(bg); sheet.classList.add('has-bgimg'); }
   sheet.appendChild(el('div','date-mask'));
   FIELDS.forEach(f=>{
-    const d=el('div','fld '+(f.align==='right'?'right':'center')+(f.type==='date'?' date':''));
+    const d=el('div','fld '+(f.align==='right'?'right':'center')+(f.type==='date'?' date':'')+(f.type==='week'?' week':''));
     d.style.cssText=`left:${f.l}%;top:${f.t}%;width:${f.w}%;height:${f.h}%`;
     d.dataset.key=f.key; d.dataset.ph=f.ph;
-    if(f.type==='date'){
+    if(f.type==='week'){
+      const s=weekLabelOf(rep);
+      if(s){ d.textContent=s; d.classList.remove('empty'); d.style.fontSize=f.fs+'cqw'; }
+      else d.classList.add('empty');
+    }else if(f.type==='date'){
       const s=dateStrOf(rep);
       if(s){ d.innerHTML=s; d.classList.remove('empty'); d.style.fontSize=f.fs+'cqw'; }
       else d.classList.add('empty');
