@@ -594,6 +594,8 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 .sheet.export::after{display:none!important}
 .sheet.export .fld{background:transparent!important;border-color:transparent!important;box-shadow:none!important;transform:none!important;overflow:visible!important}
 .sheet.export .fld.empty:before{content:''!important}
+/* التاريخ في التصدير: بلا تباعد أحرف حتى تُرسم «هـ» كوحدة واحدة متصلة (تباعد الأحرف يجعل المكتبة ترسم كل حرف منفردًا) */
+.sheet.export .fld.date,.sheet.export .fld.date .dseg{letter-spacing:0!important}
 .sheet.export .pslot{border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
 </style>
 
@@ -631,7 +633,7 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 
 /* ═════════ مفاتيح التخزين ═════════ */
 const K_SET='rep2_settings', K_DRAFT='rep2_draft', K_ARCH='rep2_archive';
-const APP_VERSION='21';
+const APP_VERSION='22';
 
 /* ═════════ القوائم القابلة للإدارة ═════════ */
 const CATS=[
