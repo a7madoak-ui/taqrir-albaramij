@@ -602,6 +602,11 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 /* التاريخ في التصدير: بلا تباعد أحرف حتى تُرسم «هـ» كوحدة واحدة متصلة (تباعد الأحرف يجعل المكتبة ترسم كل حرف منفردًا) */
 .sheet.export .fld.date,.sheet.export .fld.date .dseg{letter-spacing:0!important}
 .sheet.export .pslot{border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
+/* نص الشريط الأخضر أسفل النموذج: أبيض، سطر واحد، في المنتصف */
+.sheet .fld.footer{color:#fff;font-weight:700;white-space:nowrap;justify-content:space-evenly;gap:2cqw;background:transparent;border:1px dashed rgba(255,255,255,.55)}
+.sheet .fld.footer:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.85)}
+.sheet .fld.footer:not(.empty){border-color:transparent}
+.sheet .fld.footer.empty:before{color:rgba(255,255,255,.8)}
 </style>
 
 </head>
@@ -638,7 +643,7 @@ button:focus-visible,.btn:focus-visible,.act:focus-visible,.icon-btn:focus-visib
 
 /* ═════════ مفاتيح التخزين ═════════ */
 const K_SET='rep2_settings', K_DRAFT='rep2_draft', K_ARCH='rep2_archive';
-const APP_VERSION='26';
+const APP_VERSION='27';
 
 /* ═════════ القوائم القابلة للإدارة ═════════ */
 const CATS=[
@@ -668,6 +673,7 @@ const FIELDS=[
   {key:'imp2', group:'impacts', l:48.6, t:65.13, w:39, h:2.6, ph:'نتيجة ٣', fs:1.85, align:'right'},
   {key:'imp3', group:'impacts', l:7.7,  t:65.13, w:39, h:2.6, ph:'نتيجة ٤', fs:1.85, align:'right'},
   {key:'impl', list:'implementers', l:10, t:75.25, w:80, h:5.4, ph:'منفّذ البرنامج', fs:2.0, align:'center', multi:true},
+  {key:'footer', cls:'footer', l:4, t:97.2, w:92, h:2.7, ph:'نص الشريط الأخضر (اختياري)', fs:1.75, align:'center', lines:true},
 ];
 const PHOTOS=[
   {l:9.14,  t:83.4, w:20.0, h:10.6},
@@ -953,7 +959,7 @@ function buildSheet(){
   // قناع أبيض يخفي التاريخ المطبوع القديم على النموذج (يُنشأ مرة واحدة، أسفل حقل التاريخ)
   if(!sheet.querySelector('.date-mask')){ sheet.appendChild(el('div','date-mask')); }
   FIELDS.forEach(f=>{
-    const d=el('div','fld '+(f.align==='right'?'right':'center')+(f.type==='date'?' date':'')+(f.type==='week'?' week':''));
+    const d=el('div','fld '+(f.align==='right'?'right':'center')+(f.type==='date'?' date':'')+(f.type==='week'?' week':'')+(f.cls?' '+f.cls:''));
     d.style.cssText=`left:${f.l}%;top:${f.t}%;width:${f.w}%;height:${f.h}%`;
     d.dataset.key=f.key; d.dataset.ph=f.ph;
     d.addEventListener('click',()=> f.type==='date'?openDate():f.type==='week'?openWeekPicker():openFieldEditor(f));
@@ -982,6 +988,13 @@ function fldBase(f){
   if(f.group==='impacts') fs=f.fs*(D.impactsScale||1);
   return fs;
 }
+const linesOf=v=>String(v||'').split('\n').map(clean).filter(Boolean);
+function setLines(d,v){
+  const parts=linesOf(v);
+  if(parts.length>1) d.innerHTML=parts.map(n=>`<span>${esc(n)}</span>`).join('');
+  else d.textContent=parts[0]||'';
+  return parts.length>0;
+}
 function renderFields(){
   FIELDS.forEach(f=>{
     const d=$(`.fld[data-key="${f.key}"]`); if(!d) return;
@@ -1008,6 +1021,7 @@ function renderFields(){
       return;
     }
     const v=D[f.key]||'';
+    if(f.lines){ const has=setLines(d,v); d.classList.toggle('empty',!has); if(has) fitText(d,fldBase(f)); else d.style.fontSize=''; return; }
     d.textContent=v; d.classList.toggle('empty',!clean(v));
     if(clean(v)) fitText(d,fldBase(f)); else d.style.fontSize='';
   });
@@ -1185,14 +1199,15 @@ function openFieldEditor(f){
     <div class="bs-grip"></div>
     <div class="bs-head"><span class="bs-title">${esc(f.ph)}</span><button class="bs-x">✕</button></div>
     <div class="bs-body">
-      <textarea class="ta" id="fe-in" rows="2" placeholder="اكتب هنا أو اختر من القائمة بالأسفل…"></textarea>
-      <div class="opts" id="fe-list"></div>
+      <textarea class="ta" id="fe-in" rows="2" placeholder="${f.list?'اكتب هنا أو اختر من القائمة بالأسفل…':'اكتب هنا…'}"></textarea>
+      ${f.list?'<div class="opts" id="fe-list"></div>':'<div class="hint">اختياري — يُكتب باللون الأبيض داخل الشريط الأخضر أسفل النموذج، ويبقى الشريط أخضر إن تُرك فارغًا.<br>اكتب كل اسم في سطر (مثل: مشرف الدعم والمساندة، ثم مدير المدرسة) ليتوزّع على عرض الشريط.</div>'}
     </div>
     <div class="bs-foot"><button class="btn ghost full" id="fe-clr">مسح</button><button class="btn ok full" id="fe-ok">حفظ</button></div>`;
   const inp=$('#fe-in',ov.bs), list=$('#fe-list',ov.bs);
   inp.value=D[f.key]||'';
   let typed=false;   // لا تُرشَّح القائمة إلا بعد أن يكتب المستخدم
   function build(){
+    if(!list) return;
     const arr=SET.lists[f.list]||[]; const q=clean(inp.value), cur=clean(D[f.key]);
     const fl=(typed&&q)?arr.filter(x=>x.includes(q)):arr;
     list.innerHTML='';
@@ -1202,7 +1217,7 @@ function openFieldEditor(f){
   }
   function commit(){ saveDraft(); if(f.key==='name') applyLink(D.name); renderFields(); ov.close(); }
   inp.addEventListener('input',()=>{ typed=true; build(); });
-  $('#fe-ok',ov.bs).onclick=()=>{ D[f.key]=clean(inp.value); commit(); };
+  $('#fe-ok',ov.bs).onclick=()=>{ D[f.key]=f.lines?linesOf(inp.value).join('\n'):clean(inp.value); commit(); };
   $('#fe-clr',ov.bs).onclick=()=>{ D[f.key]=''; commit(); };
   ov.bs.querySelector('.bs-x').onclick=ov.close;
   build();
@@ -1403,7 +1418,7 @@ function renderReportToSheet(sheet,rep){
   if(_formBgJpeg){ const bg=el('img','sheet-bg'); bg.alt=''; bg.src=_formBgJpeg; sheet.appendChild(bg); sheet.classList.add('has-bgimg'); }
   sheet.appendChild(el('div','date-mask'));
   FIELDS.forEach(f=>{
-    const d=el('div','fld '+(f.align==='right'?'right':'center')+(f.type==='date'?' date':'')+(f.type==='week'?' week':''));
+    const d=el('div','fld '+(f.align==='right'?'right':'center')+(f.type==='date'?' date':'')+(f.type==='week'?' week':'')+(f.cls?' '+f.cls:''));
     d.style.cssText=`left:${f.l}%;top:${f.t}%;width:${f.w}%;height:${f.h}%`;
     d.dataset.key=f.key; d.dataset.ph=f.ph;
     if(f.type==='week'){
@@ -1421,6 +1436,9 @@ function renderReportToSheet(sheet,rep){
       else d.textContent=names[0]||'';
       d.classList.toggle('empty',names.length===0);
       if(names.length) setTimeout(()=>fitText(d,f.fs),0);
+    }else if(f.lines){
+      const has=setLines(d,rep[f.key]); d.classList.toggle('empty',!has);
+      if(has) setTimeout(()=>fitText(d,f.fs),0);
     }else{
       const v=rep[f.key]||'';
       d.textContent=v; d.classList.toggle('empty',!clean(v));
